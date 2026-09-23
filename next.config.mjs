@@ -1,6 +1,8 @@
+import { withWorkflow } from "workflow/next";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
 };
 
-export default nextConfig;
+export default withWorkflow(nextConfig);
