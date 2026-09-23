@@ -31,16 +31,8 @@ Next.js app
 Workflow
 
 
+## two different signed URLs,
 
-Signed upload URL → temporary permission for the browser to upload the file.
-After upload, the file can be public or private, depending on how the Blob is configured/accessed.
+Upload-time signed token — the browser gets this from your server to upload directly to Blob (bypasses sending pdf to server)
+Read-time signed URL — a separate one whose whole job is letting someone open the already-uploaded book's PDF (the #page=N citation feature) without exposing a permanent public link.
 
-the server authenticates with Blob using OIDC, creates a short-lived upload URL, and the browser sends the file directly to Blob using that url
-
-
-The serverless function:
-
-Receives the filename, not the file.
-Uses OIDC to authenticate with Blob.
-Creates a URL that permits only a PUT to that specific file.
-Returns that temporary URL to the browser.
