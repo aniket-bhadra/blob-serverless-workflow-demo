@@ -28,13 +28,17 @@ export async function POST(request) {
 
         return {
           token,
-          urlOptions: { addRandomSuffix: true, validUntil: Date.now() + 10 * 60 * 1000 },
+          urlOptions: {
+            addRandomSuffix: true,
+            validUntil: Date.now() + 10 * 60 * 1000,
+          },
         };
       },
-      // onUploadCompleted: async ({ blob }) => {
-      //   console.log("Upload completed:", blob.url);
-      //   await start(processUploadedFile, [blob.url]); // ← trigger point
-      // },
+      onUploadCompleted: async ({ blob }) => {
+        console.log("Upload completed:", blob.url);
+        await start(processUploadedFile, [blob.url]); // ← trigger point
+        console.log("workflow started...!!!");
+      },
     });
 
     return NextResponse.json(jsonResponse);

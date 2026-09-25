@@ -7,7 +7,7 @@ export async function processUploadedFile(blobUrl) {
   await sleep("3s");
 
   const validateResult = await validateFile(blobUrl);
-  await sleep("3s");
+  await sleep("6s");
 
   const notifyResult = await notifyServer(blobUrl, {
     logged: logResult,
