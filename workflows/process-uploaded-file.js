@@ -16,7 +16,11 @@ export async function processUploadedFile(blobUrl) {
 
   return {
     blobUrl,
-    steps: { logged: logResult, validated: validateResult, notified: notifyResult },
+    steps: {
+      logged: logResult,
+      validated: validateResult,
+      notified: notifyResult,
+    },
   };
 }
 
@@ -39,11 +43,18 @@ async function notifyServer(blobUrl, summary) {
     ? `https://${process.env.VERCEL_URL}`
     : "http://localhost:3000";
 
+  console.log(
+    "Calling workflow-complete at:",
+    `${baseUrl}/api/workflow-complete`,
+  );
+
   const res = await fetch(`${baseUrl}/api/workflow-complete`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ blobUrl, summary }),
   });
+
+  console.log("workflow-complete response status:", res.status);
 
   return { notified: res.ok };
 }
