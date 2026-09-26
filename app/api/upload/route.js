@@ -1,17 +1,9 @@
-// import { auth } from "@clerk/nextjs/server";
 import { issueSignedToken } from "@vercel/blob";
 import { handleUploadPresigned } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
-import { start } from "workflow/api";
-import { processUploadedFile } from "@/workflows/process-uploaded-file";
 
 export async function POST(request) {
-  // for clerk
-  // const { userId } = await auth();
-
-  // if (!userId) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
+  // auth check with userId here
 
   const body = await request.json();
 
@@ -33,11 +25,6 @@ export async function POST(request) {
             validUntil: Date.now() + 10 * 60 * 1000,
           },
         };
-      },
-      onUploadCompleted: async ({ blob }) => {
-        console.log("Upload completed:", blob.url);
-        await start(processUploadedFile, [blob.url]); // ← trigger point
-        console.log("workflow started...!!!");
       },
     });
 
