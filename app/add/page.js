@@ -6,18 +6,30 @@ import { useRef } from "react";
 
 export default function AddBook() {
   const userId = DUMMY_USER_ID; // production: const { userId } = useAuth();
+
   const coverRef = useRef(null);
   const pdfRef = useRef(null);
 
   async function handleSubmit(event) {
     event.preventDefault();
+
     const pdf = pdfRef.current?.files?.[0];
     const cover = coverRef.current?.files?.[0];
+
     if (!pdf) return;
 
     let coverUrl = null;
-    if (cover) {
-      try {
+
+    const guard = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", guard);
+
+    try {
+      // 1. Upload cover to public Blob Storage
+      if (cover) {
         const coverBlob = await uploadPresigned(
           `${userId}/${cover.name}`,
           cover,
@@ -26,18 +38,60 @@ export default function AddBook() {
             handleUploadUrl: "/api/upload-cover",
           },
         );
+
         coverUrl = coverBlob.url;
-      } catch (err) {
-        console.warn("Cover upload failed, continuing without it:", err);
       }
+
+      // 2. Upload PDF to private Blob Storage
+      const pdfBlob = await uploadPresigned(`${userId}/${pdf.name}`, pdf, {
+        access: "private",
+        handleUploadUrl: "/api/upload-pdf",
+      });
+
+      // 3. Save book metadata in the database
+      const res = await fetch("/api/bookupload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pdfPathname: pdfBlob.pathname,
+          coverUrl,
+        }),
+      });
+
+      // 4. Check API response
+      if (!res.ok) {
+        //         res.json() → Tries to parse the API response as JSON to get the error message.
+
+        // .catch(() => null) → If parsing fails, it returns null instead of throwing another error.
+
+        const errorData = await res.json().catch(() => null);
+
+        throw new Error(
+          errorData?.error || `Failed to save book (HTTP ${res.status})`,
+        );
+      }
+
+      const { bookId } = await res.json();
+
+      console.log("Book saved successfully:", {
+        bookId,
+        coverUrl,
+        pdfPathname: pdfBlob.pathname,
+      });
+    } catch (err) {
+      console.error("Book upload failed:", err);
+
+      if (err instanceof Error) {
+        console.error("Error message:", err.message);
+      } else {
+        console.error("Unknown error:", err);
+      }
+    } finally {
+      // 5. Remove beforeunload listener
+      window.removeEventListener("beforeunload", guard);
     }
-
-    const pdfBlob = await uploadPresigned(`${userId}/${pdf.name}`, pdf, {
-      access: "private",
-      handleUploadUrl: "/api/upload-pdf",
-    });
-
-    console.log({ coverUrl, pdfPathname: pdfBlob.pathname });
   }
 
   return (
