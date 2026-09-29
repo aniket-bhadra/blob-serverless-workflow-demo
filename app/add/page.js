@@ -2,13 +2,25 @@
 
 import { DUMMY_USER_ID } from "@/lib/dummy-auth";
 import { uploadPresigned } from "@vercel/blob/client";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 export default function AddBook() {
   const userId = DUMMY_USER_ID; // production: const { userId } = useAuth();
 
   const coverRef = useRef(null);
   const pdfRef = useRef(null);
+  const [bookId, setBookId] = useState(null);
+  const [status, setStatus] = useState("idle");
+
+  function startPolling(id) {
+    const timer = setInterval(async () => {
+      const res = await fetch(`/api/books/${id}/status`, { cache: "no-store" });
+      const data = await res.json();
+      setStatus(data.status);
+      if (data.status === "ready" || data.status === "failed")
+        clearInterval(timer);
+    }, 3000);
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -19,6 +31,7 @@ export default function AddBook() {
     if (!pdf) return;
 
     let coverUrl = null;
+    setStatus("uploading");
 
     const guard = (e) => {
       e.preventDefault();
@@ -80,6 +93,11 @@ export default function AddBook() {
         coverUrl,
         pdfPathname: pdfBlob.pathname,
       });
+
+      // 5. Start polling for workflow status
+      setBookId(bookId);
+      setStatus("processing");
+      startPolling(bookId);
     } catch (err) {
       console.error("Book upload failed:", err);
 
@@ -88,17 +106,34 @@ export default function AddBook() {
       } else {
         console.error("Unknown error:", err);
       }
+
+      setStatus("failed");
     } finally {
-      // 5. Remove beforeunload listener
+      // 6. Remove beforeunload listener
       window.removeEventListener("beforeunload", guard);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input ref={coverRef} type="file" accept="image/*" />
-      <input ref={pdfRef} type="file" accept="application/pdf" required />
-      <button type="submit">Upload</button>
-    </form>
+    <div>
+      <form onSubmit={handleSubmit}>
+        <input ref={coverRef} type="file" accept="image/*" />
+        <input ref={pdfRef} type="file" accept="application/pdf" required />
+        <button type="submit">Upload</button>
+      </form>
+      <p>Status: {status}</p>
+      {status === "ready" && bookId && (
+        <a
+          href={`/api/books/${bookId}/pdf#page=2`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open page 2
+        </a>
+      )}
+    </div>
   );
 }
+
+
+//clicking the link opens the PDF at page 2 in a new tab, with no client-side code handling the stream.
